@@ -1,0 +1,155 @@
+#Plotting functions
+#When defining each of the functions, where possible or necessary, default values are set, unless a new input is allocated in the main file
+
+#Use to collect, visualise atomic structures
+from ase.visualize.plot import plot_atoms
+#Use to write temporary files
+from ase.io import write
+
+#Plot atoms
+import matplotlib.pyplot as plt #Plot adsorption surfaces
+
+import os #Operating system
+
+#Import external functions
+from atoms import load_atoms
+from inputs import process_structures
+from colors import get_atom_colors
+from layouts import create_axes, iter_axes
+from check import check_consistency
+
+# Default labels
+DEFAULT_LABELS = {
+    "initial": "Initial",
+    "final": "Final",
+}
+
+# Default styles
+DEFAULT_STYLES = {
+    "heading": {
+        "fontname": "Times New Roman",
+        "fontsize": 24,
+        "fontweight": "bold"
+    }
+}
+
+#Create a temporary file to check images
+def view_cleanup(atoms, filename="temp_view.png", pause=True):
+
+    #Write structure to temporary image
+    write(filename, atoms,format="png",rotation="0x,0y,0z",show_unit_cell=1)
+
+    #Display image
+    img = plt.imread(filename)
+    plt.figure()
+    plt.imshow(img)
+    plt.axis("off")
+    plt.show(block=False)
+
+    #Pause for inspection
+    if pause:
+        input("Press Enter to close the figure...")
+
+    #Close figure
+    plt.close()
+
+    #Delete temp file
+    try:
+        os.remove(filename)
+    except OSError:
+        pass
+
+#Plot all configurations
+def plot_structure(res, repeat = (1,1,1), save_dir="NEB_plots",views=None,element_colors=None,layout="horizontal",labels=None,styles=None):
+ 
+    #Set views to default if not given
+    if views is None:
+        views = [('0x,0y,0z')]
+
+    #Check labels. Use default if invalid or not passed.
+    try:
+        labels["initial"]
+        labels["final"]
+    except (TypeError, KeyError):
+        labels = DEFAULT_LABELS
+
+    #Check styles. Use default if invalid or not passed.
+    try:
+        styles["heading"]
+    except (TypeError, KeyError):
+        styles = DEFAULT_STYLES
+
+    check_consistency(res) #Check atomic and elemental consistency between atomic files
+
+    #Read both Initial and Final configurations
+    atoms_ini = load_atoms(res["ini_structure"], repeat)
+    #atoms_ini.set_pbc(False)
+    atoms_fin = load_atoms(res["fin_structure"], repeat)
+    #atoms_fin.set_pbc(False)
+
+    # Apply the desired shifts in atomic position
+    atoms_ini, atoms_fin = process_structures(atoms_ini, atoms_fin)
+
+    #Different rotations of images
+    n_rot = len(views)
+
+    fig, axes = create_axes(layout, n_rot) #Figure arrangement
+
+    # Element colors, as set in main file
+    atom_colors = get_atom_colors(atoms_ini,element_colors)
+
+    #Either horizontal or vertical
+    for i,rotation in enumerate(views):
+
+        if layout == "horizontal": #Horizonal array of figures
+
+            #Initial
+            plot_atoms(atoms_ini, axes[i,0], rotation=rotation,
+                        show_unit_cell=0, colors=atom_colors)
+            axes[i,0].set_title(labels["initial"], **styles["heading"])
+
+            #Final
+            plot_atoms(atoms_fin, axes[i,1], rotation=rotation,
+                        show_unit_cell=0, colors=atom_colors)
+            axes[i,1].set_title(labels["final"], **styles["heading"])
+
+        elif layout == "vertical": #Vertical array of figures
+
+            #Initial
+            plot_atoms(atoms_ini, axes[0,i], rotation=rotation,
+                        show_unit_cell=0, colors=atom_colors)
+            axes[0,i].set_title(labels["initial"], **styles["heading"])
+
+            #Final
+            plot_atoms(atoms_fin, axes[1,i], rotation=rotation,
+                        show_unit_cell=0, colors=atom_colors)
+            axes[1,i].set_title(labels["final"], **styles["heading"])
+
+    #Remove borders and tick marks
+    for ax in iter_axes(axes):
+        #ax.set_xticks([]) #Tick marks, uncheck if border should remain
+        #ax.set_yticks([])
+        ax.set_axis_off()
+
+    # Make save directory
+    os.makedirs(save_dir, exist_ok=True)
+
+    #Use directory name to name image and remove undesirable separators
+    parts = res["transition"].split(os.sep)
+
+    #Build folder
+    base_folder = os.path.join(save_dir,parts[0])
+    #Use *parts if separating further
+    os.makedirs(base_folder, exist_ok=True)
+
+    #Filename
+    filename = "_".join(parts) + ".png"
+    #Save file to desired directory
+    save_path = os.path.join(base_folder, filename)
+
+    #Save and close figures
+    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+    #Display figures if desired
+    #plt.show()
