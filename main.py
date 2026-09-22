@@ -2,29 +2,46 @@
 #Only three are run independently and should be called within this main file (see below)
 from io_utils import find_transition #Collect file locations (POSCAR, CONTCAR, ACF.dat) for subsequent call
 from plotting import plot_structure #Plot Initial/Final structures
+from inputs import choose_neb_display, choose_energy_display, choose_energy_mode
 import os #Operating system
 
 #Define the main function to run imported functions
-def main(base, INITIAL=("ini",), FINAL=("fin",), repeat=(1,1,1), save_dir="NEB_plots",views=None,element_colors=None,layout="horizontal",labels=None,styles=None):
-    structure_files = find_transition(base,INITIAL,FINAL)
+def main(base,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_colors=None,layout="horizontal",labels=None,styles=None):
+
+    #Choose which NEB structures will be displayed
+    display = choose_neb_display()
+
+    #Choose whether energy information will be displayed
+    add_energies = choose_energy_display()
+
+    #Choose which energy information will be displayed
+    if add_energies and display == "ini_all_fin":
+        energy_mode = choose_energy_mode()
+    else:
+        energy_mode = "key"
+
+    #Collect file locations for all NEB systems
+    structure_files = find_transition(base)
+
+    #Process each NEB system
     for res in structure_files:
+
+        parts = res["transition"].split(os.sep)
+        transition_name = "_".join(parts)
+        print(f"\nProcessing: {transition_name}")
+
         try: #Output the name of the transition here to enable the user to know which system has been processed
-            parts = res["transition"].split(os.sep)
-            transition_name = "_".join(parts)
-            print(f"\nProcessing: {transition_name}")
+            plot_structure(res,repeat,save_dir,views,element_colors,layout,labels,styles,display,add_energies,energy_mode)
         except Exception as e: #In case the file name cannot be found, pass an error message
             print(f"Error processing {res['transition']}: {e}")
             continue
-        plot_structure(res,repeat,save_dir,views,element_colors,layout,labels,styles)
 
 #Entry point/switch to run function
 if __name__ == "__main__":
     base = os.getcwd()   # start from script location
 
-    INITIAL = ("ini","initial","is") #Default is to store key files of each transition in "ini" (initial state) and "fin" (final state).
-    #If there are alternative names, then please include them manually
-    FINAL = ("fin","final","fs")
     repeat = (1,1,1) #In case of adsorbate atoms extending over the unit cell, this will increase the size of periodicity
+
     save_dir="NEB_plots" #Save folder
 
     views = [ #Different rotations to view atomic/surface configurations
@@ -46,6 +63,7 @@ if __name__ == "__main__":
     #Different labels
     labels = {
     "initial": "Initial",
+    "ts": "Transition",
     "final": "Final"}
 
     #Font styles
@@ -56,4 +74,4 @@ if __name__ == "__main__":
         "fontweight": "bold"}
     }
 
-    main(base, INITIAL, FINAL, repeat, save_dir, views, element_colors, layout, labels, styles) #Start main function
+    main(base, repeat, save_dir, views, element_colors, layout, labels, styles) #Start main function

@@ -1,23 +1,33 @@
 from ase.io import read #Use to collect, visualise atomic structures
 
-#Check length consistency of initial and final structures
+#Check length consistency of all NEB structures
 def check_consistency(item):
 
-    #Atoms in each structure
-    ini_atoms = read(item["ini_structure"])
-    fin_atoms = read(item["fin_structure"])
+    #Collect the NEB structures
+    neb_structures = item["neb_structures"]
 
-    # Check that the initial and final systems contain the same number of atoms
-    if len(ini_atoms) != len(fin_atoms):
-        raise ValueError(
-            f"Atom count mismatch in {item['transition']}: "
-            f"ini={len(ini_atoms)}, fin={len(fin_atoms)}"
-        )
-    
-    #Check element ordering consistency
-    for i, (a_ini, a_fin) in enumerate(zip(ini_atoms, fin_atoms)):
-        if a_ini.symbol != a_fin.symbol:
-            raise ValueError(
-                f"Element mismatch at index {i} in {item['transition']}: "
-                f"{a_ini.symbol} (ini) != {a_fin.symbol} (fin)"
-            )
+    #Sort the image numbers
+    image_numbers = sorted(neb_structures)
+
+    #Use the first image as the reference structure
+    reference_number = image_numbers[0]
+    reference_atoms = read(neb_structures[reference_number])
+
+    #Check every other NEB image against the reference
+    for image_number in image_numbers[1:]:
+        #Read the current structure
+        atoms = read(neb_structures[image_number])
+        #Check that the structures contain the same number of atoms
+        if len(atoms) != len(reference_atoms):
+            raise ValueError(f"Atom count mismatch in {item['transition']}: "
+                             f"image {reference_number}={len(reference_atoms)}, "
+                             f"image {image_number}={len(atoms)}")
+
+        #Check element ordering consistency
+        for i, (a_reference, a_current) in enumerate(zip(reference_atoms, atoms)):
+            if a_reference.symbol != a_current.symbol:
+                raise ValueError(f"Element mismatch at index {i} in "
+                                 f"{item['transition']}: "
+                                 f"image {reference_number}={a_reference.symbol}, "
+                                 f"image {image_number}={a_current.symbol}" )
+

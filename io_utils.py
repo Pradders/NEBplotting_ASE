@@ -13,69 +13,71 @@ def get_structure(folder, files):
     else:
         raise FileNotFoundError(f"No CONTCAR or POSCAR in {folder}")
 
+#Find an NEB data file in the transition folder
+def get_neb_file(folder, files, neb_filenames=("neb.dat", "NEB.dat")):
+
+    for filename in neb_filenames:
+
+        if filename in files:
+            return os.path.join(folder, filename)
+
+    return None #In case of an improper filename
+
 #Find initial and final folders for comparisons
-def find_transition(base=os.getcwd(),initial=("ini",),final=("fin",)):
+def find_transition(base=os.getcwd(),neb_filenames=("neb.dat", "NEB.dat")):
     
     structure_files = [] #Initialise array
 
-    #Lower case for consistency
-    initial = tuple(i.lower() for i in initial)
-    final = tuple(f.lower() for f in final)
-
     for root, dirs, files in os.walk(base): #Walk from base directory, i.e., where the python file is
 
-        #Find the initial and final states
-        ini_name = next((d for d in dirs if d.lower() in initial), None)
-        fin_name = next((d for d in dirs if d.lower() in final), None)
+        neb_structures = {} #Collect all structures here
 
-        # look for folders containing ini + fin
-        if ini_name and fin_name:
+        #Check each folder in the directories
+        for folder in dirs:
 
-            #After finding the initial and final folders, join them alongside their rooted folder directories
-            ini_dir = os.path.join(root, ini_name)
-            fin_dir = os.path.join(root, fin_name)
+            # Check for numbered NEB image folders
+            if folder.isdigit():
 
-            #Collect file names in these directories
-            ini_files = os.listdir(ini_dir)
-            fin_files = os.listdir(fin_dir)
+                image_number = int(folder) #Check if the folder is a number in the first place
+                image_dir = os.path.join(root, folder) #Create a new directory to collect the CONTCAR/POSCAR file to be visualised
 
-            #Collect POSCAR/CONTCAR directories
-            ini_struct = get_structure(ini_dir, ini_files)
-            fin_struct = get_structure(fin_dir, fin_files)
+                try:
+                    image_files = os.listdir(image_dir) #List all files in the image directory
+                    image_struct = get_structure(image_dir, image_files) #Check if CONTCAR or POSCAR are present
+                    neb_structures[image_number] = image_struct #Update the neb_structures array with the new directory to the CONTCAR/POSCAR file
+                except FileNotFoundError:
+                    pass #Ignore if neither file can be found
 
-            #Root folder, relative to code location
-            transition = os.path.relpath(root, base)
+        if neb_structures:
+            transition = os.path.relpath(root, base) #List the transition
 
-            #Add directories and root folder into a file for easier access
-            structure_files.append({
-                "transition": transition, 
-                "ini_structure": ini_struct, #Initial structure
-                "fin_structure": fin_struct, #Final structure
-            })
+            neb_structures = dict(sorted(neb_structures.items())) #Sort NEB images by image number
 
-    #Check item lists just in case to ensure that each file was indeed read
-    #for item in structure_files:
-    #    print(item["transition"])
-    #    print("  ini:", item["ini_structure"])
-    #    print("  fin:", item["fin_structure"])
+            #Look for an NEB data file in the same folder as the image folders
+            neb_file = get_neb_file(root,files,neb_filenames)
+
+            structure_files.append({#Append key names and directories
+                "transition": transition,
+                "neb_structures": neb_structures,
+                "neb_file": neb_file})
 
     return structure_files #Output the file locations
 
-#If Mode 3, save any constants in a json file to reuse it
+#Save any constants in a json file to reuse it
 def save_json(entry, filename):
     data = {
         "value": entry.tolist() if hasattr(entry, "tolist") else entry
     }
     with open(filename, "w") as f:
         json.dump(data, f)
-#If Mode 3, load any constants from the saved json file to reuse it
+#Load any constants from the saved json file to reuse it
 def load_json(filename):
     try:
         with open(filename, "r") as f:
             return np.array(json.load(f)["value"])
-    except FileNotFoundError:
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
         return None
-#If Mode 3, delete the saved json file after each file is looped through
+#Delete the saved json file after each file is looped through
 def delete_file(filename):
     try:
         os.remove(filename) #Delete if possible

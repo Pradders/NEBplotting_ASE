@@ -10,10 +10,10 @@ def get_atom_colors(atoms,element_colors=None):
     colors = {}
     #Go through each atom in the structure to collect elements
     for i, atom in enumerate(atoms):
-        # user-defined colors (highest priority)
+        #Use user-defined colors (highest priority)
         if element_colors is not None and atom.symbol in element_colors:
             colors[i] = element_colors[atom.symbol]
-        # fallback to Jmol defaults
+        #Fallback to Jmol defaults if necessary
         else:
             colors[i] = jmol_colors[atomic_numbers[atom.symbol]]
 

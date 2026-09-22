@@ -1,14 +1,14 @@
 import numpy as np #Mathematical calculations
 from ase.data import covalent_radii, atomic_numbers #Collect atomic data
 
-#Calculate maximum covalent radius based on element
+#Calculate maximum covalent radius based on the elements present
 def max_radius(atoms):
     symbols = atoms.get_chemical_symbols()
     radii = [covalent_radii[atomic_numbers[s]] for s in symbols]
-    rmax = 2*max(radii)
-    return rmax
+    diameter = 2*max(radii) #Use the diameter instead
+    return diameter
 
-#Create a vector that indicates the direction of the shift in 
+#Create a vector that indicates the direction of the shift
 def build_shift(atoms,get_int):
 
     from plotting import view_cleanup #Create a temporary figure(s)
@@ -20,7 +20,7 @@ def build_shift(atoms,get_int):
     print("\nPreviewing structure.")
     view_cleanup(atoms)
 
-    #Print a message to present the maximum radius, especially in case of changes to the relative atom
+    #Print a message to present the shift, especially in case of changes to the relative atom
     print(f"\nManual shift using max_radius = {d:.3f} Å")
 
     #Input shifts to move the system based on the number of Ni atoms. Sign is important here as well. Negative sign means left/down shift. Positive sign means right/up shift.
@@ -33,6 +33,7 @@ def build_shift(atoms,get_int):
 
     return shift #Return shift
 
+#Apply a shift to an atomic structure
 def apply_shift(atoms, shift):
 
     atoms_translate = atoms.copy() #Cannot return atoms without changing variable name, otherwise the original structure will be retained

@@ -2,19 +2,21 @@
 import matplotlib.pyplot as plt #Plot adsorption surfaces
 import numpy as np #Mathematical calculations
 
-def create_axes(layout, n_rot):
+#Create the figure and axes according to the selected layout
+def create_axes(layout, n_rot, n_structures):
     if layout == "horizontal": #Horizontal
-        fig, axes = plt.subplots(n_rot, 2, figsize=(12, 6*n_rot), squeeze=False)
+        fig, axes = plt.subplots(n_rot, n_structures, figsize=(6*n_structures, 6*n_rot), squeeze=False)
         return fig, axes
 
     elif layout == "vertical": #Vertical
-        fig, axes = plt.subplots(2, n_rot, figsize=(6*n_rot, 10), squeeze=False)
+        fig, axes = plt.subplots(n_structures, n_rot, figsize=(6*n_rot, 6*n_structures), squeeze=False)
         return fig, axes
 
     else:
         raise ValueError(f"Unknown layout: {layout}")
 
-def iter_axes(axes): #generator function,  
+#Iterate through all axes regardless of their container type
+def iter_axes(axes): #generator function
     if isinstance(axes, dict): #Check for a dictionary
         for v in axes.values():
             if isinstance(v, list): #Convert to a list
