@@ -182,12 +182,22 @@ Handles structure geometry and shifting.
 Handles user interaction.
 
 # Example
-![Figure 1](Bader_plots/Hydrogenation/Hydrogenation_C6.png)
+![Figure 1](Figures/Decarbonylation_Step2_inifin_noenergy.png)
 <p align="center">
-  <em>Figure 1: Example figure of bader charge changes of C6 hydrogenation of furfural.</em>
+  <em>Figure 1: Example figure of F-CO decarbonylation to F with the initial and final images displayed without their energies.</em>
 </p>
 
-![Figure 2](Bader_plots/Hydrogenation/Hydrogenation_CH2O.png)
+![Figure 2](Figures/Decarbonylation_Step2_initsfin_energy.png)
 <p align="center">
-  <em>Figure 2: Example figure of bader charge changes of CH2O hydrogenation of furfural.</em>
+  <em>Figure 2: Example figure of F-CO decarbonylation to F with the initial, transition and final images and energies displayed.</em>
+</p>
+
+![Figure 3](Figures/Decarbonylation_Step2_allimages_initsfin_energy.png)
+<p align="center">
+  <em>Figure 3: Example figure of F-CO decarbonylation to F with all images, but only the initial, transition and final energies displayed.</em>
+</p>
+
+![Figure 4](Figures/Decarbonylation_Step2_allimagesenergies.png)
+<p align="center">
+  <em>Figure 4: Example figure of F-CO decarbonylation to F with all images and corresponding energies displayed.</em>
 </p>
