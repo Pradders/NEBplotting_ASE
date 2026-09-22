@@ -182,6 +182,8 @@ Handles structure geometry and shifting.
 Handles user interaction.
 
 # Example
+Please note that step 2 of furfural (F-CHO) transformation to F-H involves F-CO decarbonylation to F, which is what the images provided below display. The key files and folders for analysis are provided in the **Decarbonylation** folder.
+
 ![Figure 1](Figures/Decarbonylation_Step2_inifin_noenergy.png)
 <p align="center">
   <em>Figure 1: Example figure of F-CO decarbonylation to F with the initial and final images displayed without their energies.</em>
