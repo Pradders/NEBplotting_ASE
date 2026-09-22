@@ -1,131 +1,184 @@
-# NEB_plotting
-A plotting function set leveraging ASE to view the initial and final stages of an NEB plot
+# NEBplotting_ASE
 
-Version 1.0.0 (v1.0.0) current release.
+A Python plotting and analysis tool leveraging [ASE](https://wiki.fysik.dtu.dk/ase/) to visualise atomic structures from Nudged Elastic Band (NEB) calculations.
+Version 1.0.0 (v1.0.0)
 
-# General procedure
+# Overview
+This code searches for NEB transition systems and generates figures showing selected structures along the reaction pathway.
 
-## Overview
-This analysis will display the initial and final stages of a transition state (e.g., NEB).
+The available display modes are:
+1. **Initial / Final**
+2. **Initial / Transition State / Final**
+3. **Initial / All NEB images / Final**
+
+The code can optionally display the relative energy of each NEB image. The atomic structures are read from `CONTCAR` files where available, with `POSCAR` used as a fallback. As adsorbates and surfaces can extend over the unit cell boundaries in the x and y directions, the code allows for the user to shift the structure to prevent this overlap.
 
 ## Folder and file access
-The atomic positions (POSCAR/CONTCAR) will have been collected through VASP calculations. These will be placed within the initial and final folders of each reaction/transition, relative to the main.py file, which is the main file that executes the code. The names of the initial and final folders are respectively "ini" and "fin" by default and additional and/or replacement names (e.g., "initial", "final", "is", "fs") can be provided.
+A transition/reaction system should contain numbered NEB image folders as collected from e.g., VASP. The image directories must remain numbered so that the code can determine the order of the NEB pathway, e.g.,
 
-## Projection
-Additionally, atoms will be shifted in a given direction in case they (particularly adsorbates) extend over the unit cell dimensions, especially in the x,y planes and will be relative to the atom in each system that possesses the highest radius. The user will need to input integers of the x, y shifts, which will be multiplied by the maximum covalent diameter in the system (i.e., input such integers as -1, 0, +1, etc., where negative = left/down shift and positive = right/up shift). That is, all of the atoms will be shifted left, right, up, or down depending on what input value and sign is input.
+```text
+00
+01
+02
+03
+04
+```
 
-For reviewing images for shifting, one of the following methods must be selected and confirmed:
+The lowest numbered image is the **initial structure, reactant, etc.** and the highest numbered image is the **final structure, product, etc.**.
 
-1: Same shift per (ini, fin) pair (That is, whatever shift is selected for the initial image will also be projected to the final image and each image set will be iterated through. The initial unprojected image will be displayed prior to assigning the shift and the final projected image will be displayed as well.)
+Each numbered folder (i.e., image directory) must contain either CONTCAR or POSCAR, the former of which is preferred, as this tends to represent the relaxed structure.
 
-2: Manual shift for EACH structure (That is, this expands from mode 1, though each individual image will be checked and projected rather than in pairs.)
+## NEB energy data
+An NEB energy file can be placed in the same directory as the numbered image folders. The program currently recognises **neb.dat** and **NEB.dat**. That is,
 
-3: Same shift for ALL images (That is, after the shift is applied to one image set, this will be globalised as a variable and then applied to all other images. In this mode, if shift.json already exists, then it can be input. Afterwards, it may be deleted.)
+```text
+00
+01
+02
+03
+04
+neb.dat/NEB.dat
+```
 
-4: NO shift to ANY image (That is, apply no shift to any individual image)
+These filenames are defined in the relevant function in **`io_utils.py`**, specifically `find_transition()` through its `neb_filenames` argument/default. That is,
 
-If any of the inputs (see [Inputs](#inputs)) are not appropriately met with the program requirements, then the inputs will be looped and re-initiated for the user. 
+```python
+def find_transition(base=os.getcwd(), neb_filenames=("neb.dat", "NEB.dat")):
+```
 
+If a different filename is required, it can be changed **in this function** rather than in `main.py`. For example:
+
+```python
+neb_filenames=("neb.dat", "NEB.dat", "my_energy_file.dat")
+```
+
+An original NEB energy profile might contain electronic energies, while a later analysis may incorporate corrections such as:
+* zero-point energy (ZPE)
+* entropy
+* thermal contributions
+* other free-energy corrections
+
+If the corrected energies are written to a new file, the filename can be added to `neb_filenames` in `find_transition()`.
+
+The important point is that **the plotting code does not need to be changed simply because the NEB energy filename changes**. The filename discovery is handled by `io_utils.py`.
+
+The interpretation of the NEB data is:
+
+* NEB image rows contain the energy associated with each image.
+* The final entry is treated as the **reaction enthalpy** rather than another NEB image energy.
+* The initial image is displayed with a relative energy of `0.00 eV`.
+* The transition state is determined from the highest-energy NEB image when sufficient NEB energy information is available.
+
+# Key inputs and validations
+
+The program checks user inputs and repeats the relevant question when an invalid value is supplied.
+
+These include:
+* invalid mode numbers
+* invalid yes/no responses
+* invalid integer shifts
+* invalid floating-point energies
+* invalid transition-state image numbers
+* transition-state images that do not exist
+* insufficient NEB energy data
+
+This prevents an invalid input from being silently accepted.
+
+## Display modes
+When the program starts, the user selects which structures should be displayed.
+### Mode 1 — Initial / Final
+Only the first and last NEB structures are displayed. If energy display is enabled, only the reaction enthalpy is required alongside the automatically defined initial energy of `0.00 eV`. A transition-state image or transition-state energy is **not required** for this mode.
+### Mode 2 — Initial / Transition State / Final
+The figure displays the first, last and main transition NEB structures. If a valid NEB energy file is available, the transition-state image and its energy are determined from the highest-energy NEB image and the enthalpy is determined from the final image, while if an NEB energy file is unavailable, the user is asked to manually specify these values.
+### Mode 3 — Initial / All NEB images / Final
+All NEB images are displayed. The program can display either **Key energies** (only initial, transition state, and enthalpic energies) or **All energies**. When all image energies are supplied, the transition-state image can be identified automatically as the highest-energy NEB image.
+
+## Energy input
+Energy information can be collected in two ways: **Automatic energy input** from neb.dat or **Manual energy input** from user input.
+
+## Projection and structure shifting
+The atomic structures can optionally be shifted before plotting. The shift is based on the largest covalent radius present in the structure. The user then supplies integer values for the x and y shifts. Negative integer values shift the structure left/down, while positive values shift it right/up. As such, the shift is calculated by:
+
+```text
+Shift = integer × maximum covalent diameter
+```
+
+## Shift modes
+Three shifting modes are available: **Mode 1 — MANUAL shift for EACH image** (every individual NEB image is treated separately), **Mode 2 — SAME shift for ALL images in EACH SYSTEM** (same shift applied to each image in each system), and **Mode 4 — NO shift** (no shifting of atoms).
+
+The shifting is visually previewed through a temporary image prior to confirmation.
+
+## Shift preview and confirmation
+Whenever a shift needs to be selected, the structure is previewed before the shift is confirmed. If the result is rejected, the shift can be entered again. Inputs are repeatedly requested until an appropriate value is supplied.
+
+# Image features
 ## Colour coding
-The initial and final atomic systems will be elementally colour-coded which can be configured (e.g., Ni = lightgray, C = black) and saved into an image. The initial and final images will be arranged horizontally. All images will be given as top view (default: ('0x,0y,0z')) and as single periodicity ((1,1,1)) by default and can be adjusted.
+Atoms are colour-coded according to their chemical element. The code uses ASE/Jmol colours by default. Specific element colours can also be supplied manually; elements which are not user-defined retain the default colour. For example,
 
-## Image saving
-The figures will be saved in a new folder called "NEB_plots". Furthermore, if the ini and fin folders are nested within additional folders, the os.walk() function will find them, the folder locations will be stored and these new folders will be created within "NEB_plots" to save the images, so as to make them easier to find. Prior to the images being output and saved, the folder/image name will be printed for reference.
+```python
+element_colors = {
+    "Ni": "lightgray",
+    "C": "black",
+}
+```
 
-Example saved images are provided below.
+## Views and periodicity
+The default view is a top view:
 
-## Inputs
-### Mode selection
-The inputs are as follows (N.B. if these are not followed, then these questions will be repeated until an appropriate response is provided):
+```python
+views = [('0x,0y,0z')]
+```
 
-Enter mode (1/2/3/4):
+Additional views can be configured if required.
 
-Confirm mode x? (y/n):
+The default periodic repetition is:
 
-### Shifting
-Previewing structure. (I.e., view the structure prior to shifting and then close it)
+```python
+repeat = (1, 1, 1)
+```
 
-Press Enter to close the figure...
+This means that the original unit cell is displayed once. Larger values can be employed if desired.
 
-Manual shift using max_radius = x.xxx Å (Starts after closing the figure. This will provide that maximum covalent diameter, e.g., 2.480 Å for Ni)
+## Figure layout
+The structures can be arranged as either "horizontal" or "vertical".
 
-Shift in x (multiples of diameter, N.B. negative = left/down, positive = right/up): (I.e., input the +/- integer for the shift in the x-direction, this number will be multiplied by the covalent diameter, and all atoms in the unit cell will be shifted by that distance and in that direction)
+## Plot styles
+Plot fonts, sizes and other visual properties can be configured through the plotting/style settings.
 
-Shift in y (multiples of diameter, N.B. negative = left/down, positive = right/up): (Same as with the previous, but in the y-direction) 
+# Image saving
+The output directory to store the figures can be changed using:
 
-Press Enter to close the figure...
+```python
+save_dir = "NEB_plots"
+```
 
-Accept this result? (y/n): y (Starts after closing the figure)
+The transition path is converted into an image name using underscores. Before an image is generated, the transition/system name is printed to the terminal so that the user can identify which structure is currently being processed.
 
-### Delete shift.json
-Existing shift.json detected. Delete shift.json?
+# Structure consistency
+All NEB images belonging to the same transition system are checked for consistency. The program verifies that the structures contain the same number of atoms and the same element ordering. A mismatch can indicate that the structures are not directly comparable.
 
-Accept this result/outcome? (y/n):
+# Usage
+The code is run from the **main.py** file. 
 
-# Key files, folders and inputs
+## External function files
 
-## Folder structure
+The project is divided into separate function files.
 
-reactionORtransition/
-
--> ini/
-
-->-> CONTCARorPOSCAR
-
--> fin/
-
-->-> CONTCARorPOSCAR
-
-I.e., CONTCAR/POSCAR are mandatory for the code to work
-
-E.g., ![Hydrogenation](Hydrogenation/), as provided, contains ![C6](Hydrogenation/C6) and ![CH2O](Hydrogenation/CH2O) folders that each contain "fin" and "ini" and likewise contain CONTCAR/POSCAR. When saving images into ![NEB_plots](NEB_plots), as the two key folders are contained within "C6", which in turn is nested within "Hydrogenation", this folder will create a subfolder called "Hydrogenation", into which the image files will be stored and entitled by these names connected with underscores (_). In the given example, this system outputs "Hydrogenation_C6.png" and "Hydrogenation_CH2O.png". See [Example](#example) below.
-
-## Usage
-
-python main.py ([`main.py`](main.py))
-
-## Options for output adjustment, can be configured in main and/or function files
-
-layout = "horizontal", "vertical" #I.e., How the images should be displayed in the final figure
-
-repeat = (1,1,1) #i.e., periodic cell expansion
-
-views = [('0x,0y,0z')] #i.e., top view
-
-INITIAL = ("ini","initial","is") #Default is to store key files of each transition in folders entitled "ini" (initial state) and "fin" (final state), or anything similar. These variables will store such possible names. If there are alternate names, then please include them manually
-
-FINAL = ("fin","final","fs") #Default is to store key files of each transition in folders entitled "ini" (initial state) and "fin" (final state), or anything similar. These variables will store such possible names. If there are alternate names, then please include them manually
-
-save_dir="NEB_plots" #Save folder
-
-element_colors = {"Ni": "lightgray", "C": "black",} #Define desired colors for atoms in POSCAR/CONTCAR if desired, else default colours will be used
-
-## external function files
-[`io_utils.py`](io_utils.py) #Collect file locations (POSCAR, CONTCAR, ACF.dat, .json files) for subsequent call
-
-[`atoms.py`](atoms.py) #Load atoms
-
-[`check.py`](check.py) #Ensure consistency between files, especially with number of atoms and atomic positions between POSCAR/CONTCAR
-
-[`plotting.py`](plotting.py) #Plot and save atomic figures
-
-[`colors.py`](colors.py) #Set atomic colors.
-
-[`layouts.py`](layouts.py) #Set display configurations of ASE images (with colors)
-
-[`geometry.py`](geometry.py) #Shifts in x,y direction where necessary
-
-[`inputs.py`](inputs.py) #Different options of atomic shifting and image collection
+### `io_utils.py`
+Handles file and directory discovery.
+### `atoms.py`
+Loads atomic structures using ASE.
+### `check.py`
+Checks structural consistency between NEB images.
+### `plotting.py`
+Handles the creation and saving of the figures.
+### `colors.py`
+Controls atomic colours.
+### `layouts.py`
+Controls the arrangement of ASE views in the matplotlib figure.
+### `geometry.py`
+Handles structure geometry and shifting.
+### `inputs.py`
+Handles user interaction.
 
 # Example
-Two examples are provided (the "C6" and "CH2O" folders), which you can use to observe the functionality of this code by running the main.py file. Please note that this is for single hydrogenation of the C6 atom of the furfural molecule and the O7 atom of the F-CH2O molecule. Feel free to delete these examples when running your own code. Please see two example figures below:
-
-![Figure 1: Example figure of C6 hydrogenation of furfural](Hydrogenation/Hydrogenation_C6.png)
-<p align="center">
-  <em>Figure 1: Example figure of C6 hydrogenation of furfural.</em>
-</p>
-
-![Figure 2: Example figure of CH2O hydrogenation of furfural](Hydrogenation/Hydrogenation_CH2O.png)
-<p align="center">
-  <em>Figure 2: Example figure of CH2O hydrogenation of furfural.</em>
-</p>
