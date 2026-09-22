@@ -182,3 +182,12 @@ Handles structure geometry and shifting.
 Handles user interaction.
 
 # Example
+![Figure 1](Bader_plots/Hydrogenation/Hydrogenation_C6.png)
+<p align="center">
+  <em>Figure 1: Example figure of bader charge changes of C6 hydrogenation of furfural.</em>
+</p>
+
+![Figure 2](Bader_plots/Hydrogenation/Hydrogenation_CH2O.png)
+<p align="center">
+  <em>Figure 2: Example figure of bader charge changes of CH2O hydrogenation of furfural.</em>
+</p>
