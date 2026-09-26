@@ -6,7 +6,8 @@ from inputs import choose_neb_display, choose_energy_display, choose_energy_mode
 import os #Operating system
 
 #Define the main function to run imported functions
-def main(base,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_colors=None,layout="horizontal",labels=None,styles=None):
+def main(base,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_colors=None,layout="horizontal",
+         labels=None,styles=None,reference_folder=None,reference_symbols=("Ni",)):
 
     #Choose which NEB structures will be displayed
     display = choose_neb_display()
@@ -31,7 +32,9 @@ def main(base,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_colors=None
         print(f"\nProcessing: {transition_name}")
 
         try: #Output the name of the transition here to enable the user to know which system has been processed
-            plot_structure(res,repeat,save_dir,views,element_colors,layout,labels,styles,display,add_energies,energy_mode)
+            plot_structure(res,repeat,save_dir,views,element_colors,layout,labels,styles,display,
+                           add_energies,energy_mode,reference_folder,reference_symbols)
+            
         except Exception as e: #In case the file name cannot be found, pass an error message
             print(f"Error processing {res['transition']}: {e}")
             continue
@@ -39,6 +42,14 @@ def main(base,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_colors=None
 #Entry point/switch to run function
 if __name__ == "__main__":
     base = os.getcwd()   # start from script location
+
+    # Optional reference structure used to keep the substrate representation consistent across different systems.
+    # Use reference_folder = None to analyse structures without an external reference.
+    # Else, direct the variable to the folder containing the relevant CONTCAR/POSCAR file.
+    reference_folder = os.path.join(base,"Reference") #Folder containing reference CONTCAR/POSCAR
+    #reference_folder = None
+
+    reference_symbols = ("Ni",) #Elements belonging to the reference structure
 
     repeat = (1,1,1) #In case of adsorbate atoms extending over the unit cell, this will increase the size of periodicity
 
@@ -74,4 +85,4 @@ if __name__ == "__main__":
         "fontweight": "bold"}
     }
 
-    main(base, repeat, save_dir, views, element_colors, layout, labels, styles) #Start main function
+    main(base, repeat, save_dir, views, element_colors, layout, labels, styles, reference_folder, reference_symbols) #Start main function

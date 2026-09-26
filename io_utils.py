@@ -3,6 +3,7 @@
 import numpy as np #Mathematical calculations
 import json #JS file
 import os #Operating system
+from atoms import load_atoms
 
 #Collect CONTCAR folder location first, failing that POSCAR folder location, or failing that raise an error
 def get_structure(folder, files):
@@ -22,6 +23,20 @@ def get_neb_file(folder, files, neb_filenames=("neb.dat", "NEB.dat")):
             return os.path.join(folder, filename)
 
     return None #In case of an improper filename
+
+#Find and load a reference structure. CONTCAR is preferred over POSCAR, but either valid file is usable.
+def get_reference_structure(folder,repeat=(1,1,1)):
+
+    for filename in ("CONTCAR", "POSCAR"):
+        path = os.path.join(folder, filename)
+        if os.path.isfile(path):
+            try:
+                return load_atoms(path,repeat)
+            except Exception:
+                print(f"Could not load reference structure: {path}")
+
+    #Return None if neither structure could be loaded.
+    return None
 
 #Find initial and final folders for comparisons
 def find_transition(base=os.getcwd(),neb_filenames=("neb.dat", "NEB.dat")):
@@ -62,24 +77,3 @@ def find_transition(base=os.getcwd(),neb_filenames=("neb.dat", "NEB.dat")):
                 "neb_file": neb_file})
 
     return structure_files #Output the file locations
-
-#Save any constants in a json file to reuse it
-def save_json(entry, filename):
-    data = {
-        "value": entry.tolist() if hasattr(entry, "tolist") else entry
-    }
-    with open(filename, "w") as f:
-        json.dump(data, f)
-#Load any constants from the saved json file to reuse it
-def load_json(filename):
-    try:
-        with open(filename, "r") as f:
-            return np.array(json.load(f)["value"])
-    except (FileNotFoundError, json.JSONDecodeError, KeyError):
-        return None
-#Delete the saved json file after each file is looped through
-def delete_file(filename):
-    try:
-        os.remove(filename) #Delete if possible
-    except FileNotFoundError:
-        pass

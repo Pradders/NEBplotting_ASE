@@ -8,7 +8,7 @@ from ase.io import write
 
 #Plot atoms
 import matplotlib.pyplot as plt #Plot adsorption surfaces
-
+import numpy as np
 import os #Operating system
 
 #Import external functions
@@ -16,8 +16,9 @@ from atoms import load_atoms
 from inputs import process_structures
 from colors import get_atom_colors
 from layouts import create_axes, iter_axes
-from check import check_consistency
+from check import check_consistency, check_reference_structure
 from analysis import read_neb_data, find_ts_image, find_ts_energies, find_image_energies, find_reaction_enthalpy
+from io_utils import get_reference_structure
 
 # Default labels
 DEFAULT_LABELS = {
@@ -78,10 +79,93 @@ def split_images(selected_images, selected_labels, max_images):
 
     return image_groups, label_groups
 
+#Prepare a visual copy of an NEB image so that the selected reference atoms use the same periodic representation as the reference structure.
+def prepare_visual_structure(atoms,reference_atoms,reference_symbols):
+
+    visual_reference = reference_atoms.copy()
+
+    #Get fractional coordinates inside the unit cell.
+    current_scaled = atoms.get_scaled_positions(wrap=False)
+    reference_scaled = reference_atoms.get_scaled_positions(wrap=True)
+
+    cell = atoms.get_cell()
+
+    #Keep track of the occurrence number of each element.
+    #This allows the reference structure to contain more than one type of substrate atom.
+    reference_indices = {}
+    current_indices = {}
+
+    for symbol in reference_symbols:
+
+        reference_indices[symbol] = [
+            i for i, atom_symbol
+            in enumerate(reference_atoms.get_chemical_symbols())
+            if atom_symbol == symbol
+        ]
+
+        current_indices[symbol] = [
+            i for i, atom_symbol
+            in enumerate(atoms.get_chemical_symbols())
+            if atom_symbol == symbol
+        ]
+
+    # Find one common periodic translation for the whole structure.
+    best_shift = np.zeros(3)
+    best_distance = np.inf
+
+    for x_shift in (-1, 0, 1):
+
+        for y_shift in (-1, 0, 1):
+
+            total_distance = 0.0
+
+            for symbol in reference_symbols:
+
+                for reference_index, current_index in zip(
+                    reference_indices[symbol],
+                    current_indices[symbol]
+                ):
+
+                    # Current atom with a common periodic translation.
+                    candidate = current_scaled[current_index].copy()
+                    candidate[0] += x_shift
+                    candidate[1] += y_shift
+
+                    # Difference from the corresponding reference atom.
+                    difference = candidate - reference_scaled[reference_index]
+
+                    # Convert to Cartesian distance.
+                    distance = np.linalg.norm(difference @ cell)
+
+                    total_distance += distance**2
+
+            # Keep the common translation giving the smallest total distance for all reference atoms.
+            if total_distance < best_distance:
+
+                best_distance = total_distance
+                best_shift = np.array([x_shift, y_shift, 0.0])
+
+    # Apply the SAME periodic translation to the entire structure.
+    reference_scaled += best_shift
+    visual_reference.set_cell(cell)
+    visual_reference.set_scaled_positions(reference_scaled)
+
+    # Collect only the atoms that are NOT part of the reference substrate.
+    non_reference_indices = [
+        i for i, symbol in enumerate(atoms.get_chemical_symbols())
+        if symbol not in reference_symbols]
+
+    visual_adsorbates = atoms[non_reference_indices]
+
+    # Combine reference substrate with the non-reference atoms.
+    visual_atoms = visual_reference + visual_adsorbates
+
+    return visual_atoms
+
 #Plot all configurations
-def plot_structure(res,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_colors=None,
-                   layout="horizontal",labels=None,styles=None,display="ini_fin",
-                   add_energies=False,energy_mode="key",max_images=10):
+def plot_structure(res,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_colors=None,layout="horizontal",
+                   labels=None,styles=None,display="ini_fin",add_energies=False,energy_mode="key",reference_folder=None,
+                   reference_symbols=None,max_images=10):
  
     #Set views to default if not given
     if views is None:
@@ -107,12 +191,29 @@ def plot_structure(res,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_co
 
     check_consistency(res) #Check atomic and elemental consistency between atomic files
 
+    #Load the reference structure if a reference folder was provided
+    if reference_folder is not None:
+        reference_atoms = get_reference_structure(reference_folder, repeat)
+    else:
+        reference_atoms = None
+
     #Read all NEB configurations
     neb_structures = {}
 
     for image_number, path in res["neb_structures"].items():
         #Load the atomic structure
-        neb_structures[image_number] = load_atoms(path, repeat)
+        atoms = load_atoms(path,repeat)
+        #Use the supplied reference structure if available
+        if reference_atoms is not None:
+            check_reference_structure(atoms,reference_atoms,reference_symbols)
+        #Otherwise use the first NEB image as the reference
+        elif image_number == min(res["neb_structures"]):
+            reference_indices = [i for i, symbol in enumerate(atoms.get_chemical_symbols()) if symbol in reference_symbols]
+            reference_atoms = atoms[reference_indices].copy()
+        #Prepare the visual structure
+        visual_atoms = prepare_visual_structure(atoms,reference_atoms,reference_symbols)
+        #Store the prepared structure
+        neb_structures[image_number] = visual_atoms
 
     #Apply the desired shifts to the NEB structures
     neb_structures = process_structures(neb_structures)
