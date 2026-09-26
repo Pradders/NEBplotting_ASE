@@ -302,7 +302,7 @@ Handles user interaction.
 
 Please note that step 2 of furfural (F-CHO) transformation to F-H involves F-CO decarbonylation to F, which is what the images provided below display. The key files and folders for analysis are provided in the **Decarbonylation** folder.
 
-![Figure 1]\(Figures/Decarbonylation_Step2_inifin_noenergy.png\)
+![Figure 1]\(Figures/Decarbonylation_Step2_inifin_noenergy.png)
 
 <p align="center">
 
@@ -310,7 +310,7 @@ Please note that step 2 of furfural (F-CHO) transformation to F-H involves F-CO 
 
 </p>
 
-![Figure 2]\(Figures/Decarbonylation_Step2_initsfin_energy.png\)
+![Figure 2]\(Figures/Decarbonylation_Step2_initsfin_energy.png)
 
 <p align="center">
 
@@ -318,7 +318,7 @@ Please note that step 2 of furfural (F-CHO) transformation to F-H involves F-CO 
 
 </p>
 
-![Figure 3]\(Figures/Decarbonylation_Step2_allimages_initsfin_energy.png\)
+![Figure 3]\(Figures/Decarbonylation_Step2_allimages_initsfin_energy.png)
 
 <p align="center">
 
@@ -326,7 +326,7 @@ Please note that step 2 of furfural (F-CHO) transformation to F-H involves F-CO 
 
 </p>
 
-![Figure 4]\(Figures/Decarbonylation_Step2_allimagesenergies.png\)
+![Figure 4]\(Figures/Decarbonylation_Step2_allimagesenergies.png)
 
 <p align="center">
 
