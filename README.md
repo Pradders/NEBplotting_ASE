@@ -1,16 +1,16 @@
-**# NEBplotting_ASE**
+# NEBplotting_ASE
 
 A Python plotting and analysis tool leveraging [ASE](https://wiki.fysik.dtu.dk/ase/) to visualise atomic structures from Nudged Elastic Band (NEB) calculations.
 
 Version 1.1.0 (v1.1.0)
 
-**# v1.1.0 Key updates**
+# v1.1.0 Key updates
 
 * Added optional reference-surface structures for consistent visualisation across NEB images.
 * Added automatic fallback to the surface atoms of the first NEB image when no reference is supplied.
 * Added reference-structure validation to ensure compatibility with the NEB structures.
 
-**# Overview**
+# Overview
 
 This code searches for NEB transition systems and generates figures showing selected structures along the reaction pathway.
 
@@ -26,7 +26,7 @@ The code can optionally display the relative energy of each NEB image. The atomi
 
 In v1.1.0, an optional reference surface can also be supplied for visual consistency between NEB images. The selected reference atoms are replaced by the corresponding atoms from the reference structure, while the adsorbate configuration of each individual NEB image is retained. If no external reference structure is supplied, the selected surface atoms from the first NEB image are used as the reference for the remaining images.
 
-**## Folder and file access**
+## Folder and file access
 
 A transition/reaction system should contain numbered NEB image folders as collected from e.g., VASP. The image directories must remain numbered so that the code can determine the order of the NEB pathway, e.g.,
 
@@ -48,7 +48,7 @@ The lowest numbered image is the ****initial structure, reactant, etc.**** and t
 
 Each numbered folder (i.e., image directory) must contain either CONTCAR or POSCAR, the former of which is preferred, as this tends to represent the relaxed structure.
 
-**## Reference structure**
+## Reference structure
 
 An optional reference structure can be supplied to provide a consistent surface for visualising all NEB images. The reference folder should contain either `CONTCAR` or `POSCAR`, with `CONTCAR` preferred.
 
@@ -68,7 +68,7 @@ If no reference structure is available, the selected surface atoms from the **fi
 
 The reference structure is checked to ensure that it contains the requested reference elements and the same number of reference atoms as the NEB structures.
 
-**## NEB energy data**
+## NEB energy data
 
 An NEB energy file can be placed in the same directory as the numbered image folders. The program currently recognises ****neb.dat**** and ****NEB.dat****. That is,
 
