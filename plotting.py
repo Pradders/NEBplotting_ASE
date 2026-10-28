@@ -5,6 +5,7 @@
 from ase.visualize.plot import plot_atoms
 #Use to write temporary files
 from ase.io import write
+from ase.io import read  # Read atomic structures
 
 #Plot atoms
 import matplotlib.pyplot as plt #Plot adsorption surfaces
@@ -12,7 +13,6 @@ import numpy as np
 import os #Operating system
 
 #Import external functions
-from atoms import load_atoms
 from inputs import process_structures
 from colors import get_atom_colors
 from layouts import create_axes, iter_axes
@@ -69,6 +69,9 @@ def split_images(selected_images, selected_labels, max_images):
     if max_images < 1:
         raise ValueError("max_images must be at least 1")
 
+    if len(selected_images) != len(selected_labels):
+        raise ValueError("The number of selected images must match the number of labels.")
+
     #Split images and labels into matching groups
     image_groups = []
     label_groups = []
@@ -98,16 +101,22 @@ def prepare_visual_structure(atoms,reference_atoms,reference_symbols):
     for symbol in reference_symbols:
 
         reference_indices[symbol] = [
-            i for i, atom_symbol
-            in enumerate(reference_atoms.get_chemical_symbols())
+            i for i, atom_symbol in enumerate(reference_atoms.get_chemical_symbols())
             if atom_symbol == symbol
         ]
 
         current_indices[symbol] = [
-            i for i, atom_symbol
-            in enumerate(atoms.get_chemical_symbols())
+            i for i, atom_symbol in enumerate(atoms.get_chemical_symbols())
             if atom_symbol == symbol
         ]
+
+        # Ensure that corresponding atoms can be matched.
+        if len(reference_indices[symbol]) != len(current_indices[symbol]):
+            raise ValueError(
+                f"Reference atom count mismatch for {symbol}: "
+                f"{len(reference_indices[symbol])} reference atoms and "
+                f"{len(current_indices[symbol])} NEB atoms."
+            )
 
     # Find one common periodic translation for the whole structure.
     best_shift = np.zeros(3)
@@ -123,8 +132,7 @@ def prepare_visual_structure(atoms,reference_atoms,reference_symbols):
 
                 for reference_index, current_index in zip(
                     reference_indices[symbol],
-                    current_indices[symbol]
-                ):
+                    current_indices[symbol]):
 
                     # Current atom with a common periodic translation.
                     candidate = current_scaled[current_index].copy()
@@ -141,7 +149,6 @@ def prepare_visual_structure(atoms,reference_atoms,reference_symbols):
 
             # Keep the common translation giving the smallest total distance for all reference atoms.
             if total_distance < best_distance:
-
                 best_distance = total_distance
                 best_shift = np.array([x_shift, y_shift, 0.0])
 
@@ -165,7 +172,7 @@ def prepare_visual_structure(atoms,reference_atoms,reference_symbols):
 #Plot all configurations
 def plot_structure(res,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_colors=None,layout="horizontal",
                    labels=None,styles=None,display="ini_fin",add_energies=False,energy_mode="key",reference_folder=None,
-                   reference_symbols=None,max_images=10):
+                   reference_symbols=("Ni",),max_images=10):
  
     #Set views to default if not given
     if views is None:
@@ -194,20 +201,26 @@ def plot_structure(res,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_co
     #Load the reference structure if a reference folder was provided
     if reference_folder is not None:
         reference_atoms = get_reference_structure(reference_folder, repeat)
+
+        if reference_atoms is None:
+            raise FileNotFoundError(f"Could not load reference structure from: {reference_folder}")
     else:
         reference_atoms = None
 
     #Read all NEB configurations
     neb_structures = {}
 
-    for image_number, path in res["neb_structures"].items():
+    for image_number, path in sorted(res["neb_structures"].items()):
         #Load the atomic structure
-        atoms = load_atoms(path,repeat)
+        atoms = read(path)
+        # Repeat the structure if requested.
+        if repeat != (1, 1, 1):
+            atoms = atoms.repeat(repeat)
         #Use the supplied reference structure if available
         if reference_atoms is not None:
             check_reference_structure(atoms,reference_atoms,reference_symbols)
         #Otherwise use the first NEB image as the reference
-        elif image_number == min(res["neb_structures"]):
+        elif reference_folder is None and image_number == min(res["neb_structures"]):
             reference_indices = [i for i, symbol in enumerate(atoms.get_chemical_symbols()) if symbol in reference_symbols]
             reference_atoms = atoms[reference_indices].copy()
         #Prepare the visual structure

@@ -24,6 +24,10 @@ def main(base,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_colors=None
     #Collect file locations for all NEB systems
     structure_files = find_transition(base)
 
+    if not structure_files:
+        print(f"No valid NEB transitions found in: {base}")
+        return
+
     #Process each NEB system
     for res in structure_files:
 
@@ -43,11 +47,12 @@ def main(base,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_colors=None
 if __name__ == "__main__":
     base = os.getcwd()   # start from script location
 
-    # Optional reference structure used to keep the substrate representation consistent across different systems.
-    # Use reference_folder = None to analyse structures without an external reference.
-    # Else, direct the variable to the folder containing the relevant CONTCAR/POSCAR file.
-    reference_folder = os.path.join(base,"Reference") #Folder containing reference CONTCAR/POSCAR
-    #reference_folder = None
+    # Optional reference surface for consistent substrate visualisation.
+    # Ensure the reference and input structures have compatible cell dimensions, cell orientation, and ordering of the selected substrate atoms.
+    # The reference is for visualisation; it should not alter Bader charge calculations.
+    include_reference = True
+    
+    reference_folder = "Reference" if include_reference else None
 
     reference_symbols = ("Ni",) #Elements belonging to the reference structure
 

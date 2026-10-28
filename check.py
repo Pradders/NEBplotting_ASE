@@ -1,12 +1,15 @@
 #Used to confirm certain consistencies in data
 from collections import Counter #Counting function
-from ase.io import read #Use to collect, visualise atomic structures
+from ase.io import read #Use to import atomic structures
 
 #Check length consistency of all NEB structures
 def check_consistency(item):
 
     #Collect the NEB structures
     neb_structures = item["neb_structures"]
+
+    if not neb_structures:
+        raise ValueError(f"No NEB structures found for {item['transition']}")
 
     #Sort the image numbers
     image_numbers = sorted(neb_structures)

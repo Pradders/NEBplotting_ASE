@@ -31,8 +31,11 @@ def read_neb_data(path):
                 continue
 
             #Collect image number and energy
-            image_number = int(columns[0]) #Typical neb.dat files contain a column of the image numbers...
-            energy = float(columns[2]) #...and one of all energies.
+            try:
+                image_number = int(columns[0]) #Typical neb.dat files contain a column of the image numbers...
+                energy = float(columns[2]) #...and one of all energies.
+            except ValueError:
+                raise ValueError(f"Invalid image number or energy on line: {line.strip()}")
 
             #Store the energy against the image number
             neb_data[image_number] = energy

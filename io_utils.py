@@ -1,18 +1,21 @@
 #For data acquisition
 
-import numpy as np #Mathematical calculations
-import json #JS file
 import os #Operating system
-from atoms import load_atoms
+from ase.io import read  # Read atomic structures
 
 #Collect CONTCAR folder location first, failing that POSCAR folder location, or failing that raise an error
-def get_structure(folder, files):
-    if "CONTCAR" in files:
-        return os.path.join(folder, "CONTCAR")
-    elif "POSCAR" in files:
-        return os.path.join(folder, "POSCAR")
+def find_structure(folder):
+    #Locate CONTCAR first and then POSCAR otherwise
+    contcar = os.path.join(folder, "CONTCAR")
+    poscar = os.path.join(folder, "POSCAR")
+
+    #Return the file location as a string
+    if os.path.isfile(contcar):
+        return contcar
+    elif os.path.isfile(poscar):
+        return poscar
     else:
-        raise FileNotFoundError(f"No CONTCAR or POSCAR in {folder}")
+        return None
 
 #Find an NEB data file in the transition folder
 def get_neb_file(folder, files, neb_filenames=("neb.dat", "NEB.dat")):
@@ -27,11 +30,18 @@ def get_neb_file(folder, files, neb_filenames=("neb.dat", "NEB.dat")):
 #Find and load a reference structure. CONTCAR is preferred over POSCAR, but either valid file is usable.
 def get_reference_structure(folder,repeat=(1,1,1)):
 
+    if not folder or not os.path.isdir(folder):
+        print(f"Could not load reference structure from: {folder}")
+        return None
+
     for filename in ("CONTCAR", "POSCAR"):
         path = os.path.join(folder, filename)
         if os.path.isfile(path):
             try:
-                return load_atoms(path,repeat)
+                atoms = read(path)
+                if repeat != (1, 1, 1):
+                    atoms = atoms.repeat(repeat)
+                return atoms
             except Exception:
                 print(f"Could not load reference structure: {path}")
 
@@ -55,13 +65,10 @@ def find_transition(base=os.getcwd(),neb_filenames=("neb.dat", "NEB.dat")):
 
                 image_number = int(folder) #Check if the folder is a number in the first place
                 image_dir = os.path.join(root, folder) #Create a new directory to collect the CONTCAR/POSCAR file to be visualised
+                image_struct = find_structure(image_dir) #Check if CONTCAR or POSCAR are present
 
-                try:
-                    image_files = os.listdir(image_dir) #List all files in the image directory
-                    image_struct = get_structure(image_dir, image_files) #Check if CONTCAR or POSCAR are present
+                if image_struct is not None:
                     neb_structures[image_number] = image_struct #Update the neb_structures array with the new directory to the CONTCAR/POSCAR file
-                except FileNotFoundError:
-                    pass #Ignore if neither file can be found
 
         if neb_structures:
             transition = os.path.relpath(root, base) #List the transition

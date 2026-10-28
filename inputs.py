@@ -1,3 +1,4 @@
+import math
 from geometry import build_shift, apply_shift #Atomic shifting functions
 
 _current_mode = None #Global variable in selecting mode of imaging
@@ -9,6 +10,21 @@ def get_int(prompt):
             return int(input(prompt))
         except ValueError:
             print("Invalid input. Please enter an integer (e.g., -1, 0, 1).")
+
+# Obtain a floating number. If not a float, then repeat.
+def get_float(prompt):
+
+    while True:
+        try:
+            value = float(input(prompt))
+
+            if math.isfinite(value): #Check that the floating value is valid
+                return value
+
+            print("Invalid input. Please enter a finite number.")
+
+        except ValueError:
+            print("Invalid input. Please enter a number.")
 
 #Choose which structures to display
 def choose_neb_display():
@@ -40,56 +56,49 @@ def choose_neb_display():
 #Manually enter key energy information (TS, enthalpy) for the NEB calculation
 def manual_key_energies(image_numbers):
 
-    #TS image number
-    while True:
-        try:
-            #Ask for the TS image number
-            ts_image = int(input("Enter TS image number: "))
-            #Check that the selected image exists
-            if ts_image in image_numbers:
-                break
-            print("Invalid image number. Please select an available NEB image.")
-        except ValueError:
-            print("Invalid input. Please enter an integer.")
+    image_numbers = sorted(image_numbers) #Easier to sort them just in case
 
-    #TS energy
-    while True:
-        try:
-            #Ask for the TS energy
-            ts_energy = float(input("Enter TS energy: "))
-            break
-        except ValueError:
-            print("Invalid input. Please enter a (floating) number.")
+    if not image_numbers:
+        raise ValueError("No NEB image numbers are available.")
 
-    #Reaction enthalpy
     while True:
-        try:
-            #Ask for the reaction enthalpy
-            enthalpy = float(input("Enter reaction enthalpy: "))
+        #Ask for the TS image number
+        ts_image = int(input("Enter TS image number: "))
+        #Check that the selected image exists
+        if ts_image in image_numbers:
             break
-        except ValueError:
-            print("Invalid input. Please enter a (floating) number.")
+        print("Invalid image number. Please select an available NEB image.")
+
+    #Ask for the TS energy
+    ts_energy = get_float("Enter TS energy: ")
+    #Ask for the reaction enthalpy
+    enthalpy = get_float("Enter reaction enthalpy: ")
 
     return ts_image, ts_energy, enthalpy
 
 #Ask the user to select the transition-state image number
 def manual_ts_image(image_numbers):
 
+    image_numbers = sorted(image_numbers) #Easier to sort them just in case
+    
+    if not image_numbers:
+        raise ValueError("No NEB image numbers are available.")
+
     while True:
-        try:
-            ts_image = int(input("Enter TS image number: "))
+        ts_image = get_int("Enter TS image number: ")
 
-            if ts_image in image_numbers:
-                return ts_image
+        if ts_image in image_numbers:
+            return ts_image
 
-            print("Invalid image number. "
-                "Please select an available NEB image.")
+        print("Invalid image number. Please select an available NEB image.")
 
-        except ValueError:
-            print("Invalid input. Please enter an integer.")
-
-#Ask the user to enter the energy for every NEB image
+#Ask the user to enter the energy for every NEB image. The first image is assigned as 0 eV.
 def manual_image_energies(image_numbers):
+
+    image_numbers = sorted(image_numbers) #Easier to sort them just in case
+
+    if not image_numbers:
+        raise ValueError("No NEB image numbers are available.")
 
     image_energies = {}
 
@@ -102,41 +111,25 @@ def manual_image_energies(image_numbers):
         if image_number == image_numbers[-1]:
             continue
 
-        while True:
-            try:
-                energy = float(input(f"Enter energy for image {image_number} (Image 0 = 0 eV): "))
-                image_energies[image_number] = energy
-                break
-
-            except ValueError:
-                print("Invalid input. Please enter a (floating) number.")
+        energy = get_float(f"Enter energy for image {image_number}"
+                           f"(Image {image_numbers[0]} = 0 eV): ")
+        image_energies[image_number] = energy
 
     #Ask for the reaction enthalpy separately
-    while True:
-        try:
-            enthalpy = float(input("Enter reaction enthalpy (final image): "))
-            break
-
-        except ValueError:
-            print("Invalid input. Please enter a (floating) number.")
+    enthalpy = get_float("Enter reaction enthalpy (final image): ")
 
     return image_energies, enthalpy
 
 #Ask the user to enter only the reaction enthalpy
 def manual_reaction_enthalpy():
 
-    while True:
-        try:
-            enthalpy = float(input("Enter reaction enthalpy: "))
-            return enthalpy
-
-        except ValueError:
-            print("Invalid input. Please enter a (floating) number.")
+    return get_float("Enter reaction enthalpy: ")
 
 #Choose how shifts will be applied
 def choose_shift_mode():
 
     global _current_mode #Global variable
+
     if _current_mode is not None: #Return the previously selected mode if one has already been chosen
         return _current_mode
 
@@ -144,7 +137,7 @@ def choose_shift_mode():
     while True:
         print("\nSelect shift mode:")
         print("1: MANUAL shift for EACH image") #Mode 1: manual shift for each individual image
-        print("2: SAME shift for ALL images in EACH SYSTEM") #Mode 1: same shift within each individual system
+        print("2: SAME shift for ALL images in EACH SYSTEM") #Mode 2: same shift within each individual system
         print("3: NO shift to ANY image") #Mode 3: no applied shift to any individual image
 
         #Which method? Select an integer among 1, 2, and 3.
@@ -227,6 +220,9 @@ def process_structures(neb_structures):
 
     from plotting import view_cleanup #Create a temporary figure(s)
 
+    if not neb_structures:
+        raise ValueError("No NEB structures are available for processing.")
+
     mode = choose_shift_mode() #Which mode?
 
     if mode == 1: #Mode 1: manual shift for each individual image
@@ -253,20 +249,17 @@ def process_structures(neb_structures):
                             
             shift = build_shift(first_image,get_int) #Prepare shift
 
-            #Apply this shift to every image
-            test_structures = {}
-
-            for image_number, atoms in neb_structures.items():
-                test_structures[image_number] = apply_shift(atoms, shift) #apply the desired shift to each image
+            #Apply the same shift to every image
+            test_structures = {
+                image_number: apply_shift(atoms, shift) for image_number, atoms in neb_structures.items()
+            }
                 
             #Check images temporarily if they look OK, especially after input shift constant factor
-            for image_number, atoms in test_structures.items():
+            for atoms in test_structures.values():
                 view_cleanup(atoms)
                 
             if confirm(): #Accept result or not
-                break
-
-        return test_structures #Return shifted results
+                return test_structures #Return shifted results
     
     elif mode == 3: #Mode 3: no applied shift to any individual image
 

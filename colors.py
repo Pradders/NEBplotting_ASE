@@ -6,9 +6,9 @@ from ase.data import atomic_numbers
 
 #Collect atom colors
 def get_atom_colors(atoms,element_colors=None):
-    #Initialise colour array/dictionary
+    #Initialise color array/dictionary
     colors = {}
-    #Go through each atom in the structure to collect elements
+    #Check each atom in the structure to collect elements
     for i, atom in enumerate(atoms):
         #Use user-defined colors (highest priority)
         if element_colors is not None and atom.symbol in element_colors:
@@ -17,6 +17,6 @@ def get_atom_colors(atoms,element_colors=None):
         else:
             colors[i] = jmol_colors[atomic_numbers[atom.symbol]]
 
-    #print(colors) #Print colour list if desired
+    #print(colors) #Print color list if desired
     
     return colors #Output colors

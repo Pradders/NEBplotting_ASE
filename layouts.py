@@ -18,7 +18,7 @@ def create_axes(layout, n_rot, n_structures):
 #Iterate through all axes regardless of their container type
 def iter_axes(axes): #generator function
     if isinstance(axes, dict): #Check for a dictionary
-        for v in axes.values():
+        for v in axes.values(): #values
             if isinstance(v, list): #Convert to a list
                 for ax in v:
                     yield ax #faster output
@@ -26,4 +26,4 @@ def iter_axes(axes): #generator function
                 yield v
     else:
         for ax in np.ravel(axes):
-            yield ax #1D list
+            yield ax #Flattened axes array
