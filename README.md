@@ -2,15 +2,22 @@
 
 A Python plotting and analysis tool leveraging [ASE](https://wiki.fysik.dtu.dk/ase/) to visualise atomic structures from Nudged Elastic Band (NEB) calculations.
 
-Version 1.1.0 (v1.1.0)
+Version 2.0.0 (v2.0.0) - current release
+* Added configurable figure layouts and support for splitting long NEB pathways across multiple figures.
+* Improved reference-surface visualisation and validation.
+* Improved handling of structure consistency and energy input.
+* atoms.py has been removed.
 
-# v1.1.0 Key updates
+# Related projects
+This repository is part of a collection of ASE-based tools for visualising VASP structures and analysing Bader charge changes.
+* [StructurePlotting_ASE](https://github.com/Pradders/StructurePlotting_ASE) — General visualisation of VASP structures, including top and side views, atomic shifting and optional reference-surface alignment.
+* [BaderTransition_atomplot](https://github.com/Pradders/BaderTransition_atomplot) — Visualisation of Bader charge differences between initial and final structures.
+* [BaderTransition_catalyst](https://github.com/Pradders/BaderTransition_catalyst) — Catalyst-specific Bader charge analysis, comparing corresponding catalyst atoms even when the total number of atoms differs between structures.
+* [NEBplotting_ASE](https://github.com/Pradders/NEBplotting_ASE) — General top-view visualisation of NEB structures calculated by VASP, including atomic shifting and optional reference-surface alignment.
 
-* Added optional reference-surface structures for consistent visualisation across NEB images.
-* Added automatic fallback to the surface atoms of the first NEB image when no reference is supplied.
-* Added reference-structure validation to ensure compatibility with the NEB structures.
+# General procedure
 
-# Overview
+## Overview
 
 This code searches for NEB transition systems and generates figures showing selected structures along the reaction pathway.
 
@@ -24,7 +31,7 @@ The available display modes are:
 
 The code can optionally display the relative energy of each NEB image. The atomic structures are read from `CONTCAR` files where available, with `POSCAR` used as a fallback. As adsorbates and surfaces can extend over the unit cell boundaries in the x and y directions, the code allows for the user to shift the structure to prevent this overlap.
 
-In v1.1.0, an optional reference surface can also be supplied for visual consistency between NEB images. The selected reference atoms are replaced by the corresponding atoms from the reference structure, while the adsorbate configuration of each individual NEB image is retained. If no external reference structure is supplied, the selected surface atoms from the first NEB image are used as the reference for the remaining images.
+An optional reference surface can be supplied for visual consistency between NEB images. The selected reference atoms are taken from the reference structure, while the remaining atoms, such as adsorbates, are retained from each individual NEB image. If no external reference structure is supplied, the selected surface atoms from the first NEB image are used as the reference.
 
 ## Folder and file access
 
@@ -66,7 +73,7 @@ The `reference_symbols` argument specifies which atoms belong to the reference s
 
 If no reference structure is available, the selected surface atoms from the **first NEB image** are used instead. This provides a consistent surface representation across the complete NEB pathway without requiring a separate reference folder.
 
-The reference structure is checked to ensure that it contains the requested reference elements and the same number of reference atoms as the NEB structures.
+The reference structure is checked to ensure that it contains the requested reference elements and the same number of reference atoms as the NEB structures. The reference atoms are matched by their occurrence order for each selected element. The current checks do not establish full atom-by-atom correspondence or comprehensive unit-cell compatibility.
 
 ## NEB energy data
 
@@ -107,11 +114,8 @@ neb_filenames=("neb.dat", "NEB.dat", "my_energy_file.dat")
 An original NEB energy profile might contain electronic energies, while a later analysis may incorporate corrections such as:
 
 * zero-point energy (ZPE)
-
 * entropy
-
 * thermal contributions
-
 * other free-energy corrections
 
 If the corrected energies are written to a new file, the filename can be added to `neb_filenames` in `find_transition()`.
@@ -121,12 +125,11 @@ The important point is that **the plotting code does not need to be changed simp
 The interpretation of the NEB data is:
 
 * NEB image rows contain the energy associated with each image.
-
 * The final entry is treated as the **reaction enthalpy** rather than another NEB image energy.
-
 * The initial image is displayed with a relative energy of `0.00 eV`.
-
 * The transition state is determined from the highest-energy NEB image when sufficient NEB energy information is available.
+
+The energy analysis assumes the expected ordering of the VASP-generated NEB data, with the final entry interpreted as the reaction enthalpy.
 
 # Key inputs and validations
 
@@ -135,18 +138,15 @@ The program checks user inputs and repeats the relevant question when an invalid
 These include:
 
 * invalid mode numbers
-
 * invalid yes/no responses
-
 * invalid integer shifts
-
 * invalid floating-point energies
-
 * invalid transition-state image numbers
-
 * transition-state images that do not exist
-
 * insufficient NEB energy data
+* empty NEB structure collections
+* inconsistent atom counts or element ordering between NEB images
+* missing reference elements or inconsistent selected reference-atom counts
 
 This prevents an invalid input from being silently accepted.
 
@@ -164,7 +164,7 @@ The figure displays the first, last and main transition NEB structures. If a val
 
 ### Mode 3 — Initial / All NEB images / Final
 
-All NEB images are displayed. The program can display either **Key energies** (only initial, transition state, and enthalpic energies) or **All energies**. When all image energies are supplied, the transition-state image can be identified automatically as the highest-energy NEB image.
+All NEB images are displayed. The program can display either **Key energies** (only initial, transition state, and enthalpic energies) or **All energies**. When all image energies are supplied, the transition-state image can be identified automatically as the highest-energy NEB image. Long image selections can be split across multiple figures using the max_images setting in plot_structure().
 
 ## Energy input
 
@@ -234,7 +234,7 @@ This means that the original unit cell is displayed once. Larger values can be e
 
 ## Figure layout
 
-The structures can be arranged as either "horizontal" or "vertical".
+The structures can be arranged as either "horizontal" or "vertical". When a large number of structures is selected, max_images controls the maximum number of images displayed in each figure.
 
 ## Plot styles
 
@@ -250,13 +250,13 @@ save_dir = "NEB_plots"
 
 ```
 
-The transition path is converted into an image name using underscores. Before an image is generated, the transition/system name is printed to the terminal so that the user can identify which structure is currently being processed.
+The transition path is converted into an image name using underscores. Before an image is generated, the transition/system name is printed to the terminal so that the user can identify which structure is currently being processed. If a transition is split into multiple figures, numbered suffixes are added to the output filenames.
 
 # Structure consistency
 
 All NEB images belonging to the same transition system are checked for consistency. The program verifies that the structures contain the same number of atoms and the same element ordering. A mismatch can indicate that the structures are not directly comparable.
 
-In v1.1.0, the selected reference atoms are additionally checked against the NEB structures to ensure that the reference surface is compatible with the structures being visualised.
+The selected reference elements are also checked to ensure that they are present in the reference structure and that the number of atoms for each selected element matches the corresponding NEB structures. Full unit-cell compatibility and atom-order correspondence checks are planned for a future update.
 
 # Usage
 
@@ -269,10 +269,6 @@ The project is divided into separate function files.
 ### `io_utils.py`
 
 Handles file and directory discovery, including optional reference-structure discovery.
-
-### `atoms.py`
-
-Loads atomic structures using ASE.
 
 ### `check.py`
 
