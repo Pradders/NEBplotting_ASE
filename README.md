@@ -2,11 +2,14 @@
 
 A Python plotting and analysis tool leveraging [ASE](https://wiki.fysik.dtu.dk/ase/) to visualise atomic structures from Nudged Elastic Band (NEB) calculations.
 
-Version 2.0.0 (v2.0.0) - current release
-* Added configurable figure layouts and support for splitting long NEB pathways across multiple figures.
-* Improved reference-surface visualisation and validation.
+Version 3.0.0 (v3.0.0) - current release
+* Improved validation of NEB structures, including atom counts, element ordering, and reference-structure compatibility.
+* Improved reference-structure handling, including checks for reference elements, selected atom counts, and unit-cell compatibility.
+* Improved validation of user inputs, including chemical element symbols, colour values, and configuration settings.
+* Improved handling of systems without a catalyst or an external reference structure.
+* Improved error messages and confirmation prompts for clearer user interaction.
+* Improved figure layout options, including support for splitting long NEB pathways across multiple figures.
 * Improved handling of structure consistency and energy input.
-* atoms.py has been removed.
 
 # Related projects
 This repository is part of a collection of ASE-based tools for visualising VASP structures and analysing Bader charge changes.
@@ -71,9 +74,9 @@ reference_symbols = ("Ni",)
 
 The `reference_symbols` argument specifies which atoms belong to the reference surface. These atoms are taken from the reference structure while the non-reference atoms, such as adsorbates, are retained from each individual NEB image.
 
-If no reference structure is available, the selected surface atoms from the **first NEB image** are used instead. This provides a consistent surface representation across the complete NEB pathway without requiring a separate reference folder.
+If no external reference structure is supplied, the selected surface atoms from the **first NEB image** are used instead. This provides a consistent surface representation across the complete NEB pathway without requiring a separate reference folder.
 
-The reference structure is checked to ensure that it contains the requested reference elements and the same number of reference atoms as the NEB structures. The reference atoms are matched by their occurrence order for each selected element. The current checks do not establish full atom-by-atom correspondence or comprehensive unit-cell compatibility.
+The reference structure is checked to ensure that it contains the requested reference elements and the same number of reference atoms as the NEB structures. The reference atoms are matched by their occurrence order for each selected element. The unit-cell dimensions and orientation of the reference structure are also checked against the first NEB image. The implementation assumes that all NEB images share the same unit cell. Full atom-by-atom geometric correspondence is not established.
 
 ## NEB energy data
 
@@ -133,7 +136,7 @@ The energy analysis assumes the expected ordering of the VASP-generated NEB data
 
 # Key inputs and validations
 
-The program checks user inputs and repeats the relevant question when an invalid value is supplied.
+Interactive inputs are validated, and the relevant question is repeated when an invalid response is supplied. Structural inconsistencies and invalid configuration settings raise appropriate errors.
 
 These include:
 
@@ -142,6 +145,8 @@ These include:
 * invalid integer shifts
 * invalid floating-point energies
 * invalid transition-state image numbers
+* invalid chemical element symbols
+* invalid user-defined colour values
 * transition-state images that do not exist
 * insufficient NEB energy data
 * empty NEB structure collections
@@ -199,13 +204,8 @@ Atoms are colour-coded according to their chemical element. The code uses ASE/Jm
 ```python
 
 element_colors = {
-
-```
-"Ni": "lightgray",
-
-"C": "black",
-```
-
+    "Ni": "lightgray",
+    "C": "black"
 }
 
 ```
@@ -216,7 +216,7 @@ The default view is a top view:
 
 ```python
 
-views = [('0x,0y,0z')]
+views = ["0x,0y,0z"]
 
 ```
 
@@ -256,7 +256,7 @@ The transition path is converted into an image name using underscores. Before an
 
 All NEB images belonging to the same transition system are checked for consistency. The program verifies that the structures contain the same number of atoms and the same element ordering. A mismatch can indicate that the structures are not directly comparable.
 
-The selected reference elements are also checked to ensure that they are present in the reference structure and that the number of atoms for each selected element matches the corresponding NEB structures. Full unit-cell compatibility and atom-order correspondence checks are planned for a future update.
+The selected reference elements are also checked to ensure that they are present in the reference structure and that the number of atoms for each selected element matches the corresponding NEB structures. When an external reference structure is supplied, its unit-cell dimensions and orientation are checked against the first NEB image. The implementation assumes that all NEB images share the same unit cell.
 
 # Usage
 
