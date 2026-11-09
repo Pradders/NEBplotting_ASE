@@ -1,8 +1,10 @@
+#Main file
+
 #All functions are located within external files. Many of them reference each other.
 #Only three are run independently and should be called within this main file (see below)
 from io_utils import find_transition #Collect file locations (POSCAR, CONTCAR, ACF.dat) for subsequent call
 from plotting import plot_structure #Plot Initial/Final structures
-from inputs import choose_neb_display, choose_energy_display, choose_energy_mode
+from inputs import get_reference_settings, choose_neb_display, choose_energy_display, choose_energy_mode #Input codes
 import os #Operating system
 
 #Define the main function to run imported functions
@@ -25,7 +27,7 @@ def main(base,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_colors=None
     structure_files = find_transition(base)
 
     if not structure_files:
-        print(f"No valid NEB transitions found in: {base}")
+        print(f"No valid NEB transitions found in: {base}.")
         return
 
     #Process each NEB system
@@ -33,14 +35,14 @@ def main(base,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_colors=None
 
         parts = res["transition"].split(os.sep)
         transition_name = "_".join(parts)
-        print(f"\nProcessing: {transition_name}")
+        print(f"\nProcessing: {transition_name}...")
 
         try: #Output the name of the transition here to enable the user to know which system has been processed
             plot_structure(res,repeat,save_dir,views,element_colors,layout,labels,styles,display,
                            add_energies,energy_mode,reference_folder,reference_symbols)
             
-        except Exception as e: #In case the file name cannot be found, pass an error message
-            print(f"Error processing {res['transition']}: {e}")
+        except Exception as e: #In case the file name cannot be found, pass an error message and distinguish the error message
+            print(f"Error processing {res['transition']}: {type(e).__name__}: {e}")
             continue
 
 #Entry point/switch to run function
@@ -50,11 +52,11 @@ if __name__ == "__main__":
     # Optional reference surface for consistent substrate visualisation.
     # Ensure the reference and input structures have compatible cell dimensions, cell orientation, and ordering of the selected substrate atoms.
     # The reference is for visualisation; it should not alter Bader charge calculations.
-    include_reference = True
-    
-    reference_folder = "Reference" if include_reference else None
 
-    reference_symbols = ("Ni",) #Elements belonging to the reference structure
+    # Reference structure settings
+    reference_symbols = ("Ni",) #This can be ignored or changed to None unless an element(s) is to be specified
+    reference_folder = "Reference" #This can be ignored or changed to None unless a folder is to be specified
+    reference_folder, reference_symbols = get_reference_settings(reference_symbols,reference_folder)
 
     repeat = (1,1,1) #In case of adsorbate atoms extending over the unit cell, this will increase the size of periodicity
 

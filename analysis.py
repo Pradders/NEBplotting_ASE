@@ -1,6 +1,7 @@
 #Data analysis
 #When defining each of the functions, where possible or necessary, default values are set, unless a new input is allocated in the main file
 
+import math #Mathematical functions
 from inputs import manual_key_energies, manual_ts_image, manual_image_energies, manual_reaction_enthalpy
 
 #Read energy data from NEB.dat
@@ -17,7 +18,7 @@ def read_neb_data(path):
     with open(path, "r") as f:
 
         #Read each line
-        for line in f:
+        for line_number, line in enumerate(f, start=1):
 
             #Ignore blank lines
             if not line.strip():
@@ -33,9 +34,16 @@ def read_neb_data(path):
             #Collect image number and energy
             try:
                 image_number = int(columns[0]) #Typical neb.dat files contain a column of the image numbers...
+            except ValueError:
+                raise ValueError(f"Invalid image number in {path}, line {line_number}: '{columns[0]}'.")
+            try:
                 energy = float(columns[2]) #...and one of all energies.
             except ValueError:
-                raise ValueError(f"Invalid image number or energy on line: {line.strip()}")
+                raise ValueError(f"Invalid energy in {path}, line {line_number}: '{columns[2]}'.")
+
+            # Check that the energy is finite
+            if not math.isfinite(energy):
+                raise ValueError(f"Non-finite energy in {path}, line {line_number}: '{columns[2]}'.")
 
             #Store the energy against the image number
             neb_data[image_number] = energy
@@ -52,10 +60,7 @@ def find_reaction_enthalpy(neb_data):
     if neb_data is not None:
 
         if len(neb_data) < 2:
-            raise ValueError(
-                "NEB data must contain at least one NEB image "
-                "and one final enthalpy entry"
-            )
+            raise ValueError("Insufficient NEB energy data: at least one NEB image and one final enthalpy entry are required.")
 
         #The final NEB data entry contains the reaction enthalpy
         return neb_data[max(neb_data)]
@@ -67,29 +72,29 @@ def find_reaction_enthalpy(neb_data):
 def find_ts_image(neb_data, image_numbers, transition=""):
 
     #Show the system currently being processed
-    print("\nFinding transition-state image")
+    print("\nFinding transition-state image...")
 
     if transition:
-        print(f"System: {transition}") #Print the system to be viewed
+        print(f"System: {transition}.") #Print the system to be viewed
 
     if neb_data is not None:
         #Check that there is at least one NEB image and one final enthalpy entry
         if len(neb_data) < 2:
-            raise ValueError("NEB data must contain at least one NEB image and one final enthalpy entry")
+            raise ValueError("Insufficient NEB energy data: at least one NEB image and one final enthalpy entry are required.")
 
         #Find the highest-energy NEB image, excluding the final enthalpy entry
         ts_image = max(list(neb_data)[:-1], key=neb_data.get)
 
     else:
         #Show the available NEB images
-        print(f"Available images: {image_numbers}")
+        print(f"Available images: {image_numbers}.")
 
         #No NEB data was found, so ask the user to select the TS image
         ts_image = manual_ts_image(image_numbers)
 
     #Check that the identified TS image is an available structure
     if ts_image not in image_numbers:
-        raise ValueError(f"TS image {ts_image} is not available among the NEB structures: {image_numbers}")
+        raise ValueError(f"TS image {ts_image} from the energy data is not available among the NEB structures for {transition}: {image_numbers}.")
 
     return ts_image
 
@@ -97,16 +102,16 @@ def find_ts_image(neb_data, image_numbers, transition=""):
 def find_ts_energies(neb_data,image_numbers,transition=""):
 
     #Show the system currently being processed
-    print("\nProcessing NEB energies")
+    print("\nProcessing NEB energies...")
 
     if transition:
-        print(f"System: {transition}") #Print the system
+        print(f"System: {transition}.") #Print the system
 
     if neb_data is not None:
 
         #Check that there is at least one NEB image and one final enthalpy entry
         if len(neb_data) < 2:
-            raise ValueError("NEB data must contain at least one NEB image and one final enthalpy entry")
+            raise ValueError("Insufficient NEB energy data: at least one NEB image and one final enthalpy entry are required.")
 
         #Find the highest-energy NEB image. Store this just in case.
         ts_image = max(list(neb_data)[:-1], key=neb_data.get)
@@ -114,7 +119,7 @@ def find_ts_energies(neb_data,image_numbers,transition=""):
         #Check that the identified TS image is an available structure
         if ts_image not in image_numbers:
             raise ValueError(
-                f"TS image {ts_image} is not available among the NEB structures: {image_numbers}")
+                f"TS image {ts_image} from the energy data is not available among the NEB structures for {transition}: {image_numbers}.")
 
         #Collect the TS energy
         ts_energy = neb_data[ts_image]
@@ -124,7 +129,7 @@ def find_ts_energies(neb_data,image_numbers,transition=""):
 
     else:
         #Show the available NEB images
-        print(f"Available images: {image_numbers}")
+        print(f"Available images: {image_numbers}.")
 
         #No NEB data was found and so ask for the values manually
         ts_image, ts_energy, enthalpy = manual_key_energies(image_numbers)
@@ -140,7 +145,7 @@ def find_image_energies(neb_data, image_numbers):
 
     #Check that there is at least one NEB image and one final enthalpy entry
     if len(neb_data) < 2:
-        raise ValueError("NEB data must contain at least one NEB image and one final enthalpy entry")
+        raise ValueError("No NEB structures are available for energy analysis.")
 
     #The final data point represents reaction enthalpy rather than an NEB image
     neb_image_data = dict(list(neb_data.items())[:-1])
@@ -161,5 +166,8 @@ def find_image_energies(neb_data, image_numbers):
         #Use the NEB energy for all other available images
         elif image_number in neb_image_data:
             image_energies[image_number] = neb_image_data[image_number]
+
+        else:
+            raise ValueError(f"Energy data for NEB image {image_number} is missing.")
 
     return image_energies, enthalpy

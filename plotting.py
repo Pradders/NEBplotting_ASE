@@ -3,13 +3,12 @@
 
 #Use to collect, visualise atomic structures
 from ase.visualize.plot import plot_atoms
-#Use to write temporary files
-from ase.io import write
-from ase.io import read  # Read atomic structures
+#Use to write temporary files and read atomic structures
+from ase.io import write, read
 
 #Plot atoms
 import matplotlib.pyplot as plt #Plot adsorption surfaces
-import numpy as np
+import numpy as np #Numerical analysis
 import os #Operating system
 
 #Import external functions
@@ -67,7 +66,7 @@ def split_images(selected_images, selected_labels, max_images):
 
     #Check that the maximum number of images is valid
     if max_images < 1:
-        raise ValueError("max_images must be at least 1")
+        raise ValueError("max_images must be at least 1.")
 
     if len(selected_images) != len(selected_labels):
         raise ValueError("The number of selected images must match the number of labels.")
@@ -76,7 +75,7 @@ def split_images(selected_images, selected_labels, max_images):
     image_groups = []
     label_groups = []
 
-    for i in range(0, len(selected_images), max_images): #
+    for i in range(0, len(selected_images), max_images): 
         image_groups.append(selected_images[i:i + max_images])
         label_groups.append(selected_labels[i:i + max_images])
 
@@ -91,6 +90,7 @@ def prepare_visual_structure(atoms,reference_atoms,reference_symbols):
     current_scaled = atoms.get_scaled_positions(wrap=False)
     reference_scaled = reference_atoms.get_scaled_positions(wrap=True)
 
+    #Collect cell dimensions
     cell = atoms.get_cell()
 
     #Keep track of the occurrence number of each element.
@@ -113,9 +113,7 @@ def prepare_visual_structure(atoms,reference_atoms,reference_symbols):
         # Ensure that corresponding atoms can be matched.
         if len(reference_indices[symbol]) != len(current_indices[symbol]):
             raise ValueError(
-                f"Reference atom count mismatch for {symbol}: "
-                f"{len(reference_indices[symbol])} reference atoms and "
-                f"{len(current_indices[symbol])} NEB atoms."
+                f"Reference atom count mismatch for {symbol}: {len(reference_indices[symbol])} reference atoms and {len(current_indices[symbol])} NEB atoms."
             )
 
     # Find one common periodic translation for the whole structure.
@@ -173,14 +171,16 @@ def prepare_visual_structure(atoms,reference_atoms,reference_symbols):
 def plot_structure(res,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_colors=None,layout="horizontal",
                    labels=None,styles=None,display="ini_fin",add_energies=False,energy_mode="key",reference_folder=None,
                    reference_symbols=("Ni",),max_images=10):
- 
+    
     #Set views to default if not given
     if views is None:
         views = [('0x,0y,0z')]
-
+    if not views:
+        raise ValueError("At least one viewing rotation must be provided.")
+    
     #Check the energy display mode
-    if energy_mode not in ["key", "all"]:
-        raise ValueError("energy_mode must be either 'key' or 'all'")
+    if energy_mode not in ("key", "all"):
+        raise ValueError("energy_mode must be either 'key' or 'all'.")
 
     #Check labels. Use default if invalid or not passed.
     try:
@@ -196,6 +196,15 @@ def plot_structure(res,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_co
     except (TypeError, KeyError):
         styles = DEFAULT_STYLES
 
+    # Validate reference symbols when reference processing is enabled
+    if reference_folder is not None or reference_symbols is not None:
+        if not reference_symbols:
+            raise ValueError("Reference symbols must contain at least one element symbol.")
+
+        for symbol in reference_symbols:
+            if symbol not in chemical_symbols[1:]:
+                raise ValueError(f"Invalid chemical element symbol: '{symbol}'.")
+
     check_consistency(res) #Check atomic and elemental consistency between atomic files
 
     #Load the reference structure if a reference folder was provided
@@ -203,28 +212,54 @@ def plot_structure(res,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_co
         reference_atoms = get_reference_structure(reference_folder, repeat)
 
         if reference_atoms is None:
-            raise FileNotFoundError(f"Could not load reference structure from: {reference_folder}")
+            raise FileNotFoundError(f"Could not load reference structure from: {reference_folder}.")
     else:
         reference_atoms = None
 
     #Read all NEB configurations
     neb_structures = {}
+    reference_warning_printed = False #Only print once for each system
+    reference_checked = False  # Track whether reference compatibility has been checked
 
     for image_number, path in sorted(res["neb_structures"].items()):
+
         #Load the atomic structure
         atoms = read(path)
+
         # Repeat the structure if requested.
         if repeat != (1, 1, 1):
             atoms = atoms.repeat(repeat)
+
         #Use the supplied reference structure if available
         if reference_atoms is not None:
-            check_reference_structure(atoms,reference_atoms,reference_symbols)
-        #Otherwise use the first NEB image as the reference
-        elif reference_folder is None and image_number == min(res["neb_structures"]):
             reference_indices = [i for i, symbol in enumerate(atoms.get_chemical_symbols()) if symbol in reference_symbols]
-            reference_atoms = atoms[reference_indices].copy()
-        #Prepare the visual structure
-        visual_atoms = prepare_visual_structure(atoms,reference_atoms,reference_symbols)
+            if reference_indices:
+                if not reference_checked:
+                    check_reference_structure(atoms,reference_atoms,reference_symbols)
+                    reference_checked = True
+                #Prepare the visual structure
+                visual_atoms = prepare_visual_structure(atoms,reference_atoms,reference_symbols)
+            else:
+                if not reference_warning_printed:
+                    print(f"Warning: No atoms matching {reference_symbols} found in system '{res['transition']}'. Plotting original structure without reference.")
+                    reference_warning_printed = True
+                visual_atoms = atoms.copy()
+
+        #Otherwise use the first NEB image as the reference
+        elif reference_folder is None and reference_symbols is not None and image_number == min(res["neb_structures"]):
+            reference_indices = [i for i, symbol in enumerate(atoms.get_chemical_symbols()) if symbol in reference_symbols]
+            if reference_indices:
+                reference_atoms = atoms[reference_indices].copy()
+                #Prepare the visual structure
+                visual_atoms = prepare_visual_structure(atoms,reference_atoms,reference_symbols)
+            else:
+                if not reference_warning_printed:
+                    print(f"Warning: No atoms matching {reference_symbols} found in system '{res['transition']}'. Plotting original structure without reference.")
+                    reference_warning_printed = True
+                visual_atoms = atoms.copy()
+        #Use the original structure when reference processing is disabled
+        else:
+            visual_atoms = atoms.copy()
         #Store the prepared structure
         neb_structures[image_number] = visual_atoms
 
@@ -233,7 +268,7 @@ def plot_structure(res,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_co
 
     #Check that at least one structure was found
     if not neb_structures:
-        raise ValueError(f"No NEB structures found for {res['transition']}")
+        raise ValueError(f"No NEB structures found for {res['transition']}.")
 
     #Collect the available image numbers
     image_numbers = sorted(neb_structures)
@@ -304,7 +339,7 @@ def plot_structure(res,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_co
             ts_position = selected_images.index(ts_image)
             selected_labels[ts_position] = labels["ts"]
     else:
-        raise ValueError(f"Unknown NEB display mode: {display}")
+        raise ValueError(f"Unknown NEB display mode: {display}.")
 
     #Split the selected images into separate figures
     image_groups, label_groups = split_images(selected_images,selected_labels,max_images)
@@ -387,6 +422,23 @@ def plot_structure(res,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_co
                     #Add energy in this format
                     if energy is not None:
                         ax.text(0.5, -0.05,f"{energy:.2f} eV",transform=ax.transAxes,ha="center",va="top",**DEFAULT_STYLES["heading"])
+
+        # Apply common viewing limits for each rotation.
+        for i in range(n_rot):
+            if layout == "horizontal":
+                rotation_axes = [axes[i, j] for j in range(n_structures)]
+            else:
+                rotation_axes = [axes[j, i] for j in range(n_structures)]
+
+            x_limits = [ax.get_xlim() for ax in rotation_axes]
+            y_limits = [ax.get_ylim() for ax in rotation_axes]
+
+            common_xlim = (min(min(lim) for lim in x_limits), max(max(lim) for lim in x_limits))
+            common_ylim = (min(min(lim) for lim in y_limits), max(max(lim) for lim in y_limits))
+
+            for ax in rotation_axes:
+                ax.set_xlim(common_xlim)
+                ax.set_ylim(common_ylim)
 
         #Remove borders and tick marks
         for ax in iter_axes(axes):

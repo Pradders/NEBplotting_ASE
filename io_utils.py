@@ -3,7 +3,7 @@
 import os #Operating system
 from ase.io import read  # Read atomic structures
 
-#Collect CONTCAR folder location first, failing that POSCAR folder location, or failing that raise an error
+#Collect CONTCAR folder location first, failing that POSCAR folder location, or failing that return None
 def find_structure(folder):
     #Locate CONTCAR first and then POSCAR otherwise
     contcar = os.path.join(folder, "CONTCAR")
@@ -21,7 +21,6 @@ def find_structure(folder):
 def get_neb_file(folder, files, neb_filenames=("neb.dat", "NEB.dat")):
 
     for filename in neb_filenames:
-
         if filename in files:
             return os.path.join(folder, filename)
 
@@ -31,7 +30,7 @@ def get_neb_file(folder, files, neb_filenames=("neb.dat", "NEB.dat")):
 def get_reference_structure(folder,repeat=(1,1,1)):
 
     if not folder or not os.path.isdir(folder):
-        print(f"Could not load reference structure from: {folder}")
+        print(f"Could not load reference structure from: {folder}.")
         return None
 
     for filename in ("CONTCAR", "POSCAR"):
@@ -42,14 +41,18 @@ def get_reference_structure(folder,repeat=(1,1,1)):
                 if repeat != (1, 1, 1):
                     atoms = atoms.repeat(repeat)
                 return atoms
-            except Exception:
-                print(f"Could not load reference structure: {path}")
+            except Exception as e:
+                print(f"Could not load reference structure: {path}: {e}.")
 
     #Return None if neither structure could be loaded.
     return None
 
 #Find initial and final folders for comparisons
 def find_transition(base=os.getcwd(),neb_filenames=("neb.dat", "NEB.dat")):
+
+    #Apply this defence if the desire is to change the base directory to a different folder from the python codes
+    if not os.path.isdir(base):
+        raise ValueError(f"Base directory does not exist or is not a directory: {base}")
     
     structure_files = [] #Initialise array
 
@@ -72,7 +75,6 @@ def find_transition(base=os.getcwd(),neb_filenames=("neb.dat", "NEB.dat")):
 
         if neb_structures:
             transition = os.path.relpath(root, base) #List the transition
-
             neb_structures = dict(sorted(neb_structures.items())) #Sort NEB images by image number
 
             #Look for an NEB data file in the same folder as the image folders
