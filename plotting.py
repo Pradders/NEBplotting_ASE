@@ -5,6 +5,8 @@
 from ase.visualize.plot import plot_atoms
 #Use to write temporary files and read atomic structures
 from ase.io import write, read
+from ase.data import chemical_symbols #Valid chemical elements
+
 
 #Plot atoms
 import matplotlib.pyplot as plt #Plot adsorption surfaces

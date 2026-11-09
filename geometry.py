@@ -27,7 +27,6 @@ def build_shift(atoms,get_int):
     #Input shifts to move the system based on the number of Ni atoms. Sign is important here as well. Negative sign means left/down shift. Positive sign means right/up shift.
     nx = get_int("Shift in x (multiples of diameter, N.B. negative = left, positive = right): ")
     ny = get_int("Shift in y (multiples of diameter, N.B. negative = down, positive = up): ")
-
     #Shifts multiplied here
     shift[0] = nx*d
     shift[1] = ny*d
