@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     # Optional reference surface for consistent substrate visualisation.
     # Ensure the reference and input structures have compatible cell dimensions, cell orientation, and ordering of the selected substrate atoms.
-    # The reference is for visualisation; it should not alter Bader charge calculations.
+    # The reference is for visualisation.
 
     # Reference structure settings
     reference_symbols = ("Ni",) #This can be ignored or changed to None unless an element(s) is to be specified
