@@ -200,7 +200,7 @@ def plot_structure(res,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_co
 
     # Validate reference symbols when reference processing is enabled
     if reference_folder is not None or reference_symbols is not None:
-        if not reference_symbols:
+        if isinstance(reference_symbols, str) or not reference_symbols: #This check ensures that the string is located within the tuple/array
             raise ValueError("Reference symbols must contain at least one element symbol.")
 
         for symbol in reference_symbols:
