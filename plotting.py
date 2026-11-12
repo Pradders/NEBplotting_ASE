@@ -25,7 +25,7 @@ from io_utils import get_reference_structure
 DEFAULT_LABELS = {
     "initial": "Initial",
     "ts": "Transition",
-    "final": "Final",
+    "final": "Final"
 }
 
 # Default styles
@@ -172,7 +172,7 @@ def prepare_visual_structure(atoms,reference_atoms,reference_symbols):
 #Plot all configurations
 def plot_structure(res,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_colors=None,layout="horizontal",
                    labels=None,styles=None,display="ini_fin",add_energies=False,energy_mode="key",reference_folder=None,
-                   reference_symbols=("Ni",),max_images=10):
+                   reference_symbols=None,max_images=10):
     
     #Set views to default if not given
     if views is None:

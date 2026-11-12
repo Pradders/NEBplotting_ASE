@@ -9,7 +9,7 @@ import os #Operating system
 
 #Define the main function to run imported functions
 def main(base,repeat=(1,1,1),save_dir="NEB_plots",views=None,element_colors=None,layout="horizontal",
-         labels=None,styles=None,reference_folder=None,reference_symbols=("Ni",)):
+         labels=None,styles=None,reference_folder=None,reference_symbols=None):
 
     #Choose which NEB structures will be displayed
     display = choose_neb_display()

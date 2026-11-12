@@ -45,6 +45,7 @@ def get_reference_structure(folder,repeat=(1,1,1)):
                 print(f"Could not load reference structure: {path}: {e}.")
 
     #Return None if neither structure could be loaded.
+    print(f"No readable CONTCAR or POSCAR found in: {folder}.")
     return None
 
 #Find initial and final folders for comparisons

@@ -24,7 +24,7 @@ def build_shift(atoms,get_int):
     #Print a message to present the shift, especially in case of changes to the relative atom
     print(f"\nManual shift using the maximum radius (converted to diameter) = {d:.3f} Å.")
 
-    #Input shifts to move the system based on the number of Ni atoms. Sign is important here as well. Negative sign means left/down shift. Positive sign means right/up shift.
+    #Input shifts to move the system based on the integer multiplied by the maximum covalent diameter. Sign is important here as well. Negative sign means left/down shift. Positive sign means right/up shift.
     nx = get_int("Shift in x (multiples of diameter, N.B. negative = left, positive = right): ")
     ny = get_int("Shift in y (multiples of diameter, N.B. negative = down, positive = up): ")
     #Shifts multiplied here

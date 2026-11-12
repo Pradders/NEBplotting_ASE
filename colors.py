@@ -2,7 +2,7 @@
 
 #Import functions for coloring
 from ase.data.colors import jmol_colors
-from ase.data import atomic_numbers,chemical_symbols
+from ase.data import atomic_numbers, chemical_symbols
 from matplotlib.colors import is_color_like
 
 #Collect atom colors
